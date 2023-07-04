@@ -1,0 +1,22 @@
+version: '3.7'
+services:
+    nest-monitor-db:
+        image: postgres:13.1-alpine
+        environment:
+            POSTGRES_USER: nestmonitor
+            POSTGRES_PASSWORD: nestmonitor
+            POSTGRES_DB: nestmonitor
+        ports:
+            - ${PGPORT:-5437}:5432
+        volumes:
+            - ~/.postgres/nestmontior:/var/lib/postgresql/data
+
+    nest-monitor-app:
+        image: nest-monitor:latest
+        environment:
+            PGHOST: localhost
+            PGPORT: 5432
+        depends_on:
+            - nest-monitor-db
+        ports:
+            - 9000:8000

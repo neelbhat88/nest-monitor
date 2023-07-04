@@ -37,7 +37,7 @@ docker: mocks
 	docker build --progress=plain . --tag nest-monitor --build-arg SSH_PRIVATE_KEY="`cat $$SSH_KEY_FILEPATH`"
 
 migrate-up:
-	 migrate -path internal/data/postgres/migrations -database 'postgres://nest-monitor:nest-monitor@localhost:5432/nest-monitor?sslmode=disable&search_path=nest-monitor' up
+	 migrate -path internal/data/postgres/migrations -database 'postgres://nestmonitor:nestmonitor@localhost:5437/nestmonitor?sslmode=disable' up
 
 migrate-down:
-	 migrate -path internal/data/postgres/migrations -database 'postgres://nest-monitor:nest-monitor@localhost:5432/nest-monitor?sslmode=disable&search_path=nest-monitor' down 1
+	 migrate -path internal/data/postgres/migrations -database 'postgres://nestmonitor:nestmonitor@localhost:5437/nestmonitor?sslmode=disable' down 1
