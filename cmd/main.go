@@ -1,18 +1,17 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
 
 	"neelbhat88/nest-monitor/m/v2/internal/data/postgres"
-	"neelbhat88/nest-monitor/m/v2/internal/events"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -32,16 +31,21 @@ func (DatabaseMigrationSource) GetMigrations() postgres.PostgresMigrations {
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	var dbConfig postgres.DatabaseConfig
-	err := cleanenv.ReadConfig("config.env", &dbConfig)
+	err := godotenv.Load()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to read DatabaseConfig from config.env")
+		log.Warn().Msg("No .env file found")
+	}
+
+	var dbConfig postgres.DatabaseConfig
+	err = cleanenv.ReadEnv(&dbConfig)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to read DatabaseConfig from config.env")
 	}
 
 	var appConfig AppConfig
-	err = cleanenv.ReadConfig("config.env", &appConfig)
+	err = cleanenv.ReadEnv(&appConfig)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to read AppConfig from config.env")
+		log.Error().Err(err).Msg("Failed to read AppConfig from config.env")
 	}
 
 	ms := DatabaseMigrationSource{}
@@ -67,37 +71,50 @@ func main() {
 	nestRepo := postgres.NewPostgresRepository(db)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hi"))
+		var id string
+		err := nestRepo.DB.Get(&id, `
+			select id
+			from event_stream
+			order by created desc
+			limit 1
+		`)
+		if err != nil {
+			log.Error().Err(err).Msg("Error reading from DB")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("error"))
+			return
+		}
+
+		w.Write([]byte(fmt.Sprintf("hi %v", id)))
 	})
 
 	log.Info().Msg("Application started")
 
-	ctx := context.Background()
+	// ctx := context.Background()
+	// go func() {
+	// 	defer func() {
+	// 		if r := recover(); r != nil {
+	// 			log.Error().Stack().Msg("Panic Recovered")
+	// 		}
+	// 	}()
 
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Error().Stack().Msg("Panic Recovered")
-			}
-		}()
+	// 	client, err := pubsub.NewClient(ctx, appConfig.GCloudProjectID)
+	// 	if err != nil {
+	// 		log.Error().Err(err).Msg("Failed to create a new secretmanager client")
+	// 	}
+	// 	defer client.Close()
 
-		client, err := pubsub.NewClient(ctx, appConfig.GCloudProjectID)
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to create a new secretmanager client")
-		}
-		defer client.Close()
+	// 	sub := client.Subscription(appConfig.GCloudSubscriptionID)
+	// 	err = sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
+	// 		err := events.WriteMessage(ctx, nestRepo, m)
+	// 		if err != nil {
+	// 			log.Error().Err(err).Msg("Error writing message to DB")
+	// 		}
+	// 	})
+	// 	if err != nil {
+	// 		log.Error().Err(err).Msg("Error on receiving message")
+	// 	}
+	// }()
 
-		sub := client.Subscription(appConfig.GCloudSubscriptionID)
-		err = sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
-			err := events.WriteMessage(ctx, nestRepo, m)
-			if err != nil {
-				log.Error().Err(err).Msg("Error writing message to DB")
-			}
-		})
-		if err != nil {
-			log.Error().Err(err).Msg("Error on receiving message")
-		}
-	}()
-
-	http.ListenAndServe(":3000", r)
+	http.ListenAndServe(":8080", r)
 }

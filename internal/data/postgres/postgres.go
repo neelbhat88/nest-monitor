@@ -17,12 +17,12 @@ type MigrationSource interface {
 }
 
 type DatabaseConfig struct {
-	Port     int64  `env:"PGPORT" env-default:"5432"`
-	Host     string `env:"PGHOST" env-default:"localhost"`
-	Name     string `env:"PGNAME" env-default:"postgres"`
-	User     string `env:"PGUSER" env-default:"user"`
-	Password string `env:"PGPASS" env-default:"password"`
-	SSLMode  bool   `env:"PGSSLENABLED" env-default:"true"`
+	Port     int64  `env:"PGPORT"`
+	Host     string `env:"PGHOST"`
+	Name     string `env:"PGNAME"`
+	User     string `env:"PGUSER"`
+	Password string `env:"PGPASS"`
+	SSLMode  bool   `env:"PGSSLENABLED"`
 }
 
 type PostgresMigrations struct {
