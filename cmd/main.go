@@ -23,6 +23,7 @@ import (
 type AppConfig struct {
 	GCloudProjectID      string `env:"GCLOUD_PROJECTID"`
 	GCloudSubscriptionID string `env:"GCLOUD_SUBSCRIPTIONID"`
+	ADCFile              string `env:"ADC_FILE"`
 }
 
 type DatabaseMigrationSource struct {
@@ -93,6 +94,7 @@ func main() {
 	})
 
 	log.Info().Msg("Application started")
+	log.Info().Str("path", appConfig.ADCFile).Msg("ADCFile")
 
 	ctx := context.Background()
 	go func() {
@@ -102,7 +104,7 @@ func main() {
 			}
 		}()
 
-		client, err := pubsub.NewClient(ctx, appConfig.GCloudProjectID, option.WithCredentialsFile("data/application_default_credentials.json"))
+		client, err := pubsub.NewClient(ctx, appConfig.GCloudProjectID, option.WithCredentialsFile(appConfig.ADCFile))
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create a new secretmanager client")
 		}
