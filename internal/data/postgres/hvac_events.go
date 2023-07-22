@@ -4,8 +4,13 @@ import (
 	"context"
 	"neelbhat88/nest-monitor/m/v2/internal/models"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	STATUS_NOISE = "noise"
 )
 
 func (n NestMonitorDB) WriteHvacEvent(ctx context.Context, event models.HVACEvent) error {
@@ -25,4 +30,23 @@ func (n NestMonitorDB) WriteHvacEvent(ctx context.Context, event models.HVACEven
 	}
 
 	return nil
+}
+
+func (n NestMonitorDB) WriteNoiseEvent(ctx context.Context) (string, error) {
+	var id string
+	err := n.QueryRowx(`
+		INSERT INTO hvac_events(event_timestamp, hvac_status)
+		VALUES($1, $2)
+		RETURNING event_id
+	`, time.Now().UTC(), STATUS_NOISE).Scan(&id)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("hvac_status", STATUS_NOISE).
+			Msg("Insert noise event into hvac_events failed")
+
+		return "", err
+	}
+
+	return id, nil
 }

@@ -93,6 +93,18 @@ func main() {
 		w.Write([]byte(fmt.Sprintf("hi %v", id)))
 	})
 
+	r.Get("/noise", func(w http.ResponseWriter, r *http.Request) {
+		id, err := nestRepo.WriteNoiseEvent(r.Context())
+		if err != nil {
+			log.Error().Err(err).Msg("Error writing Noise event")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("error"))
+			return
+		}
+
+		w.Write([]byte(fmt.Sprintf("Noise recorded! ID: %v", id)))
+	})
+
 	log.Info().Msg("Application started")
 	log.Info().Str("path", appConfig.ADCFile).Msg("ADCFile")
 

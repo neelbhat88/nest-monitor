@@ -8,4 +8,5 @@ import (
 type Controller interface {
 	WriteEventMessage(ctx context.Context, msg []byte) error
 	WriteHvacEvent(ctx context.Context, event models.HVACEvent) error
+	WriteNoiseEvent(ctx context.Context) (string, error)
 }
