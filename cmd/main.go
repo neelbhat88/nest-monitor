@@ -9,6 +9,7 @@ import (
 
 	"neelbhat88/nest-monitor/m/v2/internal/data/postgres"
 	"neelbhat88/nest-monitor/m/v2/internal/events"
+	"neelbhat88/nest-monitor/m/v2/internal/weather"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/go-chi/chi/v5"
@@ -24,6 +25,7 @@ type AppConfig struct {
 	GCloudProjectID      string `env:"GCLOUD_PROJECTID"`
 	GCloudSubscriptionID string `env:"GCLOUD_SUBSCRIPTIONID"`
 	ADCFile              string `env:"ADC_FILE"`
+	TomorrowAPIKey       string `env:"TOMORROW_API_KEY"`
 }
 
 type DatabaseMigrationSource struct {
@@ -102,7 +104,36 @@ func main() {
 			return
 		}
 
+		// Get current weather data and log it
+		weather, rawBody, err := weather.GetWeather(r.Context(), appConfig.TomorrowAPIKey)
+		if err != nil {
+			log.Error().Err(err).Msg("Error getting weather data")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("error getting weather data"))
+			return
+		}
+
+		err = nestRepo.WriteWeather(r.Context(), id, weather, rawBody)
+		if err != nil {
+			log.Error().Err(err).Msg("Error writing weather data")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("error writing weather data"))
+			return
+		}
+
 		w.Write([]byte(fmt.Sprintf("Noise recorded! ID: %v", id)))
+	})
+
+	r.Get("/weather", func(w http.ResponseWriter, r *http.Request) {
+		_, rawBody, err := weather.GetWeather(r.Context(), appConfig.TomorrowAPIKey)
+		if err != nil {
+			log.Error().Err(err).Msg("Error getting weather data")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("error getting weather data"))
+			return
+		}
+
+		w.Write(rawBody)
 	})
 
 	log.Info().Msg("Application started")
