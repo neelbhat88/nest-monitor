@@ -1,2 +1,4 @@
 application
 *.env
+
+data/application_default_credentials.json

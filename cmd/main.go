@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
 	"neelbhat88/nest-monitor/m/v2/internal/data/postgres"
+	"neelbhat88/nest-monitor/m/v2/internal/events"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/option"
 )
 
 type AppConfig struct {
@@ -90,31 +94,31 @@ func main() {
 
 	log.Info().Msg("Application started")
 
-	// ctx := context.Background()
-	// go func() {
-	// 	defer func() {
-	// 		if r := recover(); r != nil {
-	// 			log.Error().Stack().Msg("Panic Recovered")
-	// 		}
-	// 	}()
+	ctx := context.Background()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error().Stack().Msg("Panic Recovered")
+			}
+		}()
 
-	// 	client, err := pubsub.NewClient(ctx, appConfig.GCloudProjectID)
-	// 	if err != nil {
-	// 		log.Error().Err(err).Msg("Failed to create a new secretmanager client")
-	// 	}
-	// 	defer client.Close()
+		client, err := pubsub.NewClient(ctx, appConfig.GCloudProjectID, option.WithCredentialsFile("data/application_default_credentials.json"))
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create a new secretmanager client")
+		}
+		defer client.Close()
 
-	// 	sub := client.Subscription(appConfig.GCloudSubscriptionID)
-	// 	err = sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
-	// 		err := events.WriteMessage(ctx, nestRepo, m)
-	// 		if err != nil {
-	// 			log.Error().Err(err).Msg("Error writing message to DB")
-	// 		}
-	// 	})
-	// 	if err != nil {
-	// 		log.Error().Err(err).Msg("Error on receiving message")
-	// 	}
-	// }()
+		sub := client.Subscription(appConfig.GCloudSubscriptionID)
+		err = sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
+			err := events.WriteMessage(ctx, nestRepo, m)
+			if err != nil {
+				log.Error().Err(err).Msg("Error writing message to DB")
+			}
+		})
+		if err != nil {
+			log.Error().Err(err).Msg("Error on receiving message")
+		}
+	}()
 
 	http.ListenAndServe(":8080", r)
 }
