@@ -1,0 +1,1 @@
+ALTER TABLE "public"."hvac_events" ALTER COLUMN "event_timestamp" TYPE timestamp without time zone;
