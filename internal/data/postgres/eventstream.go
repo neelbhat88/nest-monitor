@@ -13,6 +13,7 @@ func (n NestMonitorDB) WriteEventMessage(ctx context.Context, msg []byte) error 
 	`, msg)
 	if err != nil {
 		log.Error().Err(err).Msg("Insert into event_stream failed")
+		return err
 	}
 
 	return nil
